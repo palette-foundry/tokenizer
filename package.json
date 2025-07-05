@@ -1,0 +1,36 @@
+{
+  "name": "@palette-foundry/tokenizer",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Josh Bowden",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Palette-Foundry/tokenizer"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "build": "tsc",
+    "test": "jest",
+    "generate": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "design systems",
+    "tokens",
+    "design tokens",
+    "tokenizer"
+  ],
+  "packageManager": "pnpm@8.15.5",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.10",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
