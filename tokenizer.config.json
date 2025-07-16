@@ -1,0 +1,11 @@
+{
+    "outputDir": "dist/tokens",
+    "tokens": {
+        "colorPrimary": "#ff0000",
+        "spacingSmall": "8px"
+    },
+    "extra": {
+        "author": "Josh Bowden",
+        "license": "ISC"
+    }
+}

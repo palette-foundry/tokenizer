@@ -1,7 +1,4 @@
-import { loadConfig } from "./config";
-import { createTokens } from "./generator";
+import { loadConfig } from './config';
 
-export function generateTokens() {
-  const config = loadConfig();
-  createTokens(config);
-}
+const config = loadConfig();
+console.log('Loaded config:', config);

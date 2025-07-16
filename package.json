@@ -1,36 +1,53 @@
 {
-  "name": "@palette-foundry/tokenizer",
-  "version": "1.0.0",
-  "description": "",
-  "author": "Josh Bowden",
-  "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Palette-Foundry/tokenizer"
-  },
-  "main": "dist/index.js",
-  "files": [
-    "dist/**/*"
-  ],
-  "scripts": {
-    "preinstall": "npx only-allow pnpm",
-    "build": "tsc",
-    "test": "jest",
-    "generate": "ts-node src/index.ts"
-  },
-  "keywords": [
-    "design systems",
-    "tokens",
-    "design tokens",
-    "tokenizer"
-  ],
-  "packageManager": "pnpm@8.15.5",
-  "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.0.10",
-    "jest": "^30.0.4",
-    "ts-jest": "^29.4.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
-  }
+    "name": "@palette-foundry/tokenizer",
+    "version": "1.0.0",
+    "description": "",
+    "author": "Josh Bowden",
+    "license": "ISC",
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Palette-Foundry/tokenizer"
+    },
+    "files": [
+        "dist/**/*"
+    ],
+    "scripts": {
+        "preinstall": "npx only-allow pnpm",
+        "build:esm": "tsc --project tsconfig.esm.json",
+        "build:cjs": "tsc --project tsconfig.cjs.json",
+        "build": "pnpm build:esm && pnpm build:cjs",
+        "test": "jest",
+        "generate": "pnpm build && node dist/cjs/index.js",
+        "lint": "eslint . --ext .js,.ts",
+        "lint:fix": "eslint . --ext .js,.ts --fix",
+        "format": "prettier --check .",
+        "format:fix": "prettier --write .",
+        "check": "npm run lint && npm run format",
+        "update:shared-config": "git submodule update --remote --merge && git add .github/shared"
+    },
+    "keywords": [
+        "design systems",
+        "tokens",
+        "design tokens",
+        "tokenizer"
+    ],
+    "packageManager": "pnpm@8.15.5",
+    "devDependencies": {
+        "@types/jest": "^30.0.0",
+        "@types/node": "^24.0.10",
+        "@typescript-eslint/eslint-plugin": "^8.37.0",
+        "@typescript-eslint/parser": "^8.37.0",
+        "eslint": "^9.31.0",
+        "eslint-config-prettier": "^10.1.5",
+        "eslint-plugin-prettier": "^5.5.1",
+        "eslint-plugin-react": "^7.37.5",
+        "jest": "^30.0.4",
+        "prettier": "^3.6.2",
+        "ts-jest": "^29.4.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.37.0"
+    }
 }

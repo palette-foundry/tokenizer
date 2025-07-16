@@ -1,23 +1,34 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
-import { Config } from "./types/config";
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { TokenizerConfig } from './types/config';
 
-export function loadConfig(): Config {
-  const configPath = resolve(process.cwd(), "token-generator.config.ts");
-  const configFile = readFileSync(configPath, "utf-8");
+export function loadConfig(): TokenizerConfig {
+    const configPath = resolve(process.cwd(), 'tokenizer.config.json');
+    const raw = readFileSync(configPath, 'utf-8');
+    const config = JSON.parse(raw);
 
-  // Evaluate the configuration file to get the configuration object
-  const config = eval(configFile);
+    if (!isValidConfig(config)) {
+        throw new Error('Invalid configuration format');
+    }
 
-  // Ensure the configuration adheres to the specified type
-  if (!isValidConfig(config)) {
-    throw new Error("Invalid configuration format");
-  }
-
-  return config;
+    return config;
 }
 
-function isValidConfig(config: any): config is Config {
-  // Implement validation logic based on the expected structure of the Config type
-  return true; // Placeholder for actual validation logic
+function isValidConfig(config: TokenizerConfig): config is TokenizerConfig {
+    const allowedKeys = ['outputDir', 'tokens'];
+    const configKeys = Object.keys(config);
+    const extraKeys = configKeys.filter((key) => !allowedKeys.includes(key));
+
+    if (extraKeys.length > 0) {
+        throw new Error(
+            `Invalid configuration: extra keys found: ${extraKeys.join(', ')}. Allowed keys are: ${allowedKeys.join(', ')}.`,
+        );
+    }
+
+    return (
+        typeof config === 'object' &&
+        typeof config.outputDir === 'string' &&
+        typeof config.tokens === 'object' &&
+        config.tokens !== null
+    );
 }
