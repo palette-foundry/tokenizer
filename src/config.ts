@@ -1,34 +1,34 @@
+import Ajv from 'ajv';
+import schema from './tokenizer.config.schema.json';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { TokenizerConfig } from './types/config';
 
-export function loadConfig(): TokenizerConfig {
+const ajv = new Ajv({
+    strict: true,
+    allowUnionTypes: true,
+});
+const validate = ajv.compile(schema);
+
+export function loadConfig() {
     const configPath = resolve(process.cwd(), 'tokenizer.config.json');
     const raw = readFileSync(configPath, 'utf-8');
     const config = JSON.parse(raw);
 
-    if (!isValidConfig(config)) {
-        throw new Error('Invalid configuration format');
-    }
+    if (!validate(config)) {
+        const extraProps = validate.errors
+            ?.filter((e) => e.keyword === 'additionalProperties')
+            .map((e) => e.params.additionalProperty);
 
-    return config;
-}
+        if (extraProps && extraProps.length > 0) {
+            throw new Error(
+                `Invalid config schema: extra properties found: ${extraProps.join(', ')}`,
+            );
+        }
 
-function isValidConfig(config: TokenizerConfig): config is TokenizerConfig {
-    const allowedKeys = ['outputDir', 'tokens'];
-    const configKeys = Object.keys(config);
-    const extraKeys = configKeys.filter((key) => !allowedKeys.includes(key));
-
-    if (extraKeys.length > 0) {
         throw new Error(
-            `Invalid configuration: extra keys found: ${extraKeys.join(', ')}. Allowed keys are: ${allowedKeys.join(', ')}.`,
+            'Invalid config schema: ' + ajv.errorsText(validate.errors),
         );
     }
 
-    return (
-        typeof config === 'object' &&
-        typeof config.outputDir === 'string' &&
-        typeof config.tokens === 'object' &&
-        config.tokens !== null
-    );
+    return config;
 }
