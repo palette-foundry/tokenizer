@@ -1,9 +1,13 @@
 import type { Tokens } from './types/tokens';
 
-// Define TokenValue type as a union of string and object for token walking
 type TokenValue = string | { [key: string]: TokenValue };
 
-// --- Token to CSS function ---
+type OutputBuckets = {
+    root: Map<string, string>;
+    dark: Map<string, string>;
+    breakpoints: Map<string, Map<string, string>>;
+};
+
 function toCssVarName(pathArr: string[]): string {
     return `--${pathArr.join('-')}`;
 }
@@ -15,7 +19,7 @@ function resolveRef(value: string, tokens: Tokens): string {
     let ref: Tokens = tokens;
     for (const key of refPath) {
         ref = ref?.[key] as Tokens;
-        if (ref === undefined) return value;
+        if (ref === undefined) return '';
     }
     return typeof ref === 'string' ? ref : '';
 }
@@ -23,41 +27,46 @@ function resolveRef(value: string, tokens: Tokens): string {
 function walkTokens(
     obj: TokenValue,
     tokens: Tokens,
-    pathArr: string[] = [],
-    selector: string = ':root',
-    output: string[] = [],
-    featureFlag?: string,
-    breakpoint?: string,
+    pathArr: string[],
+    buckets: OutputBuckets,
+    colorMode: 'light' | 'dark' | null = null,
+    breakpoint: string | null = null,
 ) {
     if (typeof obj === 'string') {
         const value = resolveRef(obj, tokens);
+        if (!value) return;
+
         const varName = toCssVarName(pathArr);
-        let rule = `${selector} { ${varName}: ${value}; }`;
-        if (breakpoint) {
-            rule = `@media (min-width: ${breakpoint}) { ${selector} { ${varName}: ${value}; } }`;
-        }
-        output.push(rule);
+        const target =
+            breakpoint != null
+                ? buckets.breakpoints.get(breakpoint)!
+                : colorMode === 'dark'
+                  ? buckets.dark
+                  : buckets.root;
+
+        target.set(varName, value);
     } else if (typeof obj === 'object' && obj !== null) {
         for (const key in obj) {
-            if (key.startsWith('.')) {
+            if (key === 'light' || key === 'dark') {
                 walkTokens(
                     obj[key],
                     tokens,
                     pathArr,
-                    key,
-                    output,
-                    key,
+                    buckets,
+                    key as 'light' | 'dark',
                     breakpoint,
                 );
             } else if (key.startsWith('@')) {
                 const minWidth = key.replace('@', '') + 'px';
+                if (!buckets.breakpoints.has(minWidth)) {
+                    buckets.breakpoints.set(minWidth, new Map());
+                }
                 walkTokens(
                     obj[key],
                     tokens,
                     pathArr,
-                    selector,
-                    output,
-                    featureFlag,
+                    buckets,
+                    colorMode,
                     minWidth,
                 );
             } else {
@@ -65,21 +74,47 @@ function walkTokens(
                     obj[key],
                     tokens,
                     [...pathArr, key],
-                    selector,
-                    output,
-                    featureFlag,
+                    buckets,
+                    colorMode,
                     breakpoint,
                 );
             }
         }
     }
-    return output;
 }
 
-export function tokensToCss(tokens: Tokens): string {
-    const output: string[] = [];
+export function tokensToOptimizedCss(tokens: Tokens): string {
+    const buckets: OutputBuckets = {
+        root: new Map(),
+        dark: new Map(),
+        breakpoints: new Map(),
+    };
+
     for (const key in tokens) {
-        walkTokens(tokens[key] as TokenValue, tokens, [key], ':root', output);
+        walkTokens(tokens[key] as TokenValue, tokens, [key], buckets);
     }
-    return output.join('\n');
+
+    const blocks: string[] = [];
+
+    function mapToBlock(selector: string, vars: Map<string, string>) {
+        if (vars.size === 0) return;
+        const lines = Array.from(vars.entries()).map(
+            ([k, v]) => `  ${k}: ${v};`,
+        );
+        blocks.push(`${selector} {\n${lines.join('\n')}\n}`);
+    }
+
+    mapToBlock(':root', buckets.root);
+    mapToBlock(`[data-colormode='dark']`, buckets.dark);
+
+    for (const [breakpoint, vars] of buckets.breakpoints) {
+        const lines = Array.from(vars.entries()).map(
+            ([k, v]) => `    ${k}: ${v};`,
+        );
+        blocks.push(
+            `@media (min-width: ${breakpoint}) {\n  :root {\n${lines.join('\n')}\n  }\n}`,
+        );
+    }
+
+    return blocks.join('\n\n');
 }
