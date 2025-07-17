@@ -1,13 +1,58 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Tokenizer Config",
     "type": "object",
+    "required": ["outputDir", "tokens"],
     "properties": {
-        "outputDir": { "type": "string" },
+        "outputDir": {
+            "type": "string"
+        },
         "tokens": {
             "type": "object",
-            "additionalProperties": { "type": ["string", "number"] }
+            "required": ["palette"],
+            "properties": {
+                "palette": {
+                    "type": "object",
+                    "properties": {
+                        "red": { "$ref": "#/definitions/colorScale" },
+                        "orange": { "$ref": "#/definitions/colorScale" },
+                        "yellow": { "$ref": "#/definitions/colorScale" },
+                        "green": { "$ref": "#/definitions/colorScale" },
+                        "blue": { "$ref": "#/definitions/colorScale" },
+                        "purple": { "$ref": "#/definitions/colorScale" },
+                        "pink": { "$ref": "#/definitions/colorScale" },
+                        "gray": { "$ref": "#/definitions/colorScale" }
+                    },
+                    "additionalProperties": false
+                }
+            }
         }
     },
-    "required": ["outputDir", "tokens"],
-    "additionalProperties": false
+    "definitions": {
+        "colorScale": {
+            "type": "object",
+            "properties": {
+                "50": { "$ref": "#/definitions/colorValue" },
+                "100": { "$ref": "#/definitions/colorValue" },
+                "200": { "$ref": "#/definitions/colorValue" },
+                "300": { "$ref": "#/definitions/colorValue" },
+                "400": { "$ref": "#/definitions/colorValue" },
+                "500": { "$ref": "#/definitions/colorValue" },
+                "600": { "$ref": "#/definitions/colorValue" },
+                "700": { "$ref": "#/definitions/colorValue" },
+                "800": { "$ref": "#/definitions/colorValue" },
+                "900": { "$ref": "#/definitions/colorValue" }
+            },
+            "additionalProperties": false
+        },
+        "colorValue": {
+            "type": "object",
+            "required": ["light", "dark"],
+            "properties": {
+                "light": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6})$" },
+                "dark": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6})$" }
+            },
+            "additionalProperties": false
+        }
+    }
 }
