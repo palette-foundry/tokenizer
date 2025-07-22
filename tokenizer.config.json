@@ -124,8 +124,17 @@
         },
         "borderRadius": {
             "none": "0px",
-            "100": "{space.50}",
-            "200": "{space.100}",
+            "100": {
+                "default": "{space.50}",
+                ".featureFlag": "{space.100}"
+            },
+            "200": {
+                "default": "{space.200}",
+                ".featureFlag": {
+                    "default": "{space.300}",
+                    "@800": "{space.400}"
+                }
+            },
             "round": "999em"
         },
         "font": {

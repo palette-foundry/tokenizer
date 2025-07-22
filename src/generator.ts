@@ -1,120 +1,223 @@
-import type { Tokens } from './types/tokens';
+import { Tokens } from './types/tokens';
 
-type TokenValue = string | { [key: string]: TokenValue };
-
-type OutputBuckets = {
-    root: Map<string, string>;
-    dark: Map<string, string>;
-    breakpoints: Map<string, Map<string, string>>;
-};
-
-function toCssVarName(pathArr: string[]): string {
-    return `--${pathArr.join('-')}`;
+interface Context {
+    selector: string; // e.g. ':root', '.featureFlag', or combined
+    media?: string; // e.g. '@media (min-width: 800px)'
+    colorMode?: 'light' | 'dark';
 }
 
-function resolveRef(value: string, tokens: Tokens): string {
-    const refMatch = value.match(/^\{(.+)\}$/);
-    if (!refMatch) return value;
-    const refPath = refMatch[1].split('.');
-    let ref: Tokens = tokens;
-    for (const key of refPath) {
-        ref = ref?.[key] as Tokens;
-        if (ref === undefined) return '';
+type RuleMap = Map<
+    string, // media query or '' for none
+    Map<
+        string, // selector
+        Map<string, string> // varName -> value
+    >
+>;
+
+/**
+ * Recursively resolve all `{path.to.token}` references in the tokens object.
+ * Limits depth to avoid infinite loops.
+ */
+function deepResolveTokens<T>(obj: T, tokens: Tokens, depth = 10): T {
+    if (depth <= 0) return obj;
+
+    if (typeof obj === 'string') {
+        const refMatch = obj.match(/^\{(.+)\}$/);
+        if (refMatch) {
+            const path = refMatch[1].split('.');
+            let ref: unknown = tokens;
+            for (const key of path) {
+                if (typeof ref !== 'object' || ref === null) return obj;
+                ref = (ref as Record<string, unknown>)[key];
+                if (ref === undefined) return obj;
+            }
+            if (typeof ref === 'string') {
+                // recursively resolve resolved string
+                return deepResolveTokens(ref, tokens, depth - 1) as T;
+            }
+            return ref as T;
+        }
+        return obj;
     }
-    return typeof ref === 'string' ? ref : '';
+
+    if (Array.isArray(obj)) {
+        return obj.map((item) =>
+            deepResolveTokens(item, tokens, depth),
+        ) as unknown as T;
+    }
+
+    if (typeof obj === 'object' && obj !== null) {
+        const res: Record<string, unknown> = {};
+        for (const key in obj) {
+            res[key] = deepResolveTokens(
+                (obj as Record<string, unknown>)[key],
+                tokens,
+                depth,
+            );
+        }
+        return res as T;
+    }
+
+    return obj;
 }
 
+/** Convert context to CSS selector string */
+function contextToSelector(context: Context): string {
+    let sel = context.selector;
+    if (context.colorMode === 'dark') {
+        sel = `[data-colormode="dark"] ${sel}`;
+    }
+    return sel;
+}
+
+/** Add CSS variable rule */
+function addRule(
+    rules: RuleMap,
+    media: string,
+    selector: string,
+    varName: string,
+    value: string,
+) {
+    if (!rules.has(media)) rules.set(media, new Map());
+    const selMap = rules.get(media)!;
+    if (!selMap.has(selector)) selMap.set(selector, new Map());
+    selMap.get(selector)!.set(varName, value);
+}
+
+/**
+ * Walk tokens recursively to generate CSS variable rules.
+ * Supports nested colorMode, media queries, classes.
+ */
 function walkTokens(
-    obj: TokenValue,
-    tokens: Tokens,
-    pathArr: string[],
-    buckets: OutputBuckets,
-    colorMode: 'light' | 'dark' | null = null,
-    breakpoint: string | null = null,
+    obj: unknown,
+    path: string[] = [],
+    context: Context = { selector: ':root' },
+    rules: RuleMap = new Map(),
 ) {
     if (typeof obj === 'string') {
-        const value = resolveRef(obj, tokens);
-        if (!value) return;
+        // Leaf value: assign CSS variable
+        const varName = `--${path.join('-')}`;
+        const media = context.media ?? '';
+        const selector = contextToSelector(context);
+        addRule(rules, media, selector, varName, obj);
+        return;
+    }
 
-        const varName = toCssVarName(pathArr);
-        const target =
-            breakpoint != null
-                ? buckets.breakpoints.get(breakpoint)!
-                : colorMode === 'dark'
-                  ? buckets.dark
-                  : buckets.root;
+    if (typeof obj !== 'object' || obj === null) return;
 
-        target.set(varName, value);
-    } else if (typeof obj === 'object' && obj !== null) {
-        for (const key in obj) {
-            if (key === 'light' || key === 'dark') {
-                walkTokens(
-                    obj[key],
-                    tokens,
-                    pathArr,
-                    buckets,
-                    key as 'light' | 'dark',
-                    breakpoint,
-                );
-            } else if (key.startsWith('@')) {
-                const minWidth = key.replace('@', '') + 'px';
-                if (!buckets.breakpoints.has(minWidth)) {
-                    buckets.breakpoints.set(minWidth, new Map());
-                }
-                walkTokens(
-                    obj[key],
-                    tokens,
-                    pathArr,
-                    buckets,
-                    colorMode,
-                    minWidth,
-                );
-            } else {
-                walkTokens(
-                    obj[key],
-                    tokens,
-                    [...pathArr, key],
-                    buckets,
-                    colorMode,
-                    breakpoint,
-                );
-            }
+    // Handle 'default' key specially (apply default tokens first)
+    if ('default' in obj) {
+        walkTokens(
+            (obj as Record<string, unknown>)['default'],
+            path,
+            context,
+            rules,
+        );
+    }
+
+    for (const key in obj) {
+        if (key === 'default') continue;
+
+        if (key === 'light' || key === 'dark') {
+            // Color mode
+            walkTokens(
+                (obj as Record<string, unknown>)[key],
+                path,
+                { ...context, colorMode: key },
+                rules,
+            );
+        } else if (key.startsWith('.')) {
+            // Class selector - nest outside root
+            const newSelector =
+                context.selector === ':root'
+                    ? key
+                    : `${context.selector} ${key}`;
+            walkTokens(
+                (obj as Record<string, unknown>)[key],
+                path,
+                { ...context, selector: newSelector },
+                rules,
+            );
+        } else if (key.startsWith('@')) {
+            // Media query (only min-width px supported)
+            const minWidthPx = key.slice(1);
+            const mediaQuery = `@media (min-width: ${minWidthPx}px)`;
+            const newMedia = context.media
+                ? `${context.media} and ${mediaQuery}`
+                : mediaQuery;
+            walkTokens(
+                (obj as Record<string, unknown>)[key],
+                path,
+                { ...context, media: newMedia },
+                rules,
+            );
+        } else {
+            // Normal key extends path
+            walkTokens(
+                (obj as Record<string, unknown>)[key],
+                [...path, key],
+                context,
+                rules,
+            );
         }
     }
 }
 
-export function tokensToOptimizedCss(tokens: Tokens): string {
-    const buckets: OutputBuckets = {
-        root: new Map(),
-        dark: new Map(),
-        breakpoints: new Map(),
-    };
+/** Generate final CSS string from rules */
+function generateCss(rules: RuleMap): string {
+    let css = '';
 
-    for (const key in tokens) {
-        walkTokens(tokens[key] as TokenValue, tokens, [key], buckets);
+    // Collect root variables for the base (no media, no class)
+    const rootVars: string[] = [];
+    const selMap = rules.get('') ?? new Map();
+
+    // Only collect variables for the base :root selector (no colorMode, no class)
+    if (selMap.has(':root')) {
+        for (const [varName, value] of selMap.get(':root')!) {
+            rootVars.push(`    ${varName}: ${value};`);
+        }
     }
 
-    const blocks: string[] = [];
-
-    function mapToBlock(selector: string, vars: Map<string, string>) {
-        if (vars.size === 0) return;
-        const lines = Array.from(vars.entries()).map(
-            ([k, v]) => `  ${k}: ${v};`,
-        );
-        blocks.push(`${selector} {\n${lines.join('\n')}\n}`);
+    // Output all root variables in a single :root block
+    if (rootVars.length) {
+        css += `:root {\n${rootVars.join('\n')}\n}\n`;
     }
 
-    mapToBlock(':root', buckets.root);
-    mapToBlock(`[data-colormode='dark']`, buckets.dark);
-
-    for (const [breakpoint, vars] of buckets.breakpoints) {
-        const lines = Array.from(vars.entries()).map(
-            ([k, v]) => `    ${k}: ${v};`,
-        );
-        blocks.push(
-            `@media (min-width: ${breakpoint}) {\n  :root {\n${lines.join('\n')}\n  }\n}`,
-        );
+    // Output all other selectors and media queries as before
+    for (const [media, selMap] of rules) {
+        if (media === '') {
+            for (const [selector, vars] of selMap) {
+                if (selector === ':root') continue; // already handled
+                css += `${selector} {\n`;
+                for (const [varName, value] of vars) {
+                    css += `    ${varName}: ${value};\n`;
+                }
+                css += '}\n';
+            }
+        } else {
+            css += `${media} {\n`;
+            for (const [selector, vars] of selMap) {
+                css += `  ${selector} {\n`;
+                for (const [varName, value] of vars) {
+                    css += `    ${varName}: ${value};\n`;
+                }
+                css += '  }\n';
+            }
+            css += '}\n';
+        }
     }
 
-    return blocks.join('\n\n');
+    return css;
+}
+
+/** Main function to convert tokens to CSS string */
+export function tokensToCss(tokens: Tokens): string {
+    // First fully resolve all `{reference}` values in tokens
+    const resolvedTokens = deepResolveTokens(tokens, tokens);
+
+    // Walk resolved tokens to build rules
+    const rules: RuleMap = new Map();
+    walkTokens(resolvedTokens, [], { selector: ':root' }, rules);
+
+    return generateCss(rules);
 }

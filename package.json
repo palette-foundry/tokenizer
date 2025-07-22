@@ -36,6 +36,7 @@
     ],
     "packageManager": "pnpm@8.15.5",
     "devDependencies": {
+        "@jest/types": "^30.0.5",
         "@types/jest": "^30.0.0",
         "@types/node": "^24.0.10",
         "@typescript-eslint/eslint-plugin": "^8.37.0",

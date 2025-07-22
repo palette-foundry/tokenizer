@@ -1,14 +1,14 @@
 import path from 'path';
 import fs from 'fs';
 import { loadConfig } from './config';
-import { tokensToOptimizedCss } from './generator';
+import { tokensToCss } from './generator';
 import { Tokens, TokenizerConfig } from './types/tokens';
 
 const config = loadConfig();
 console.log('Loaded config:', config);
 
 // --- Run and write CSS file ---
-const css = tokensToOptimizedCss(config.tokens as Tokens);
+const css = tokensToCss(config.tokens as Tokens);
 const outPath = path.join(
     process.cwd(),
     config.outputDir as TokenizerConfig['outputDir'],
