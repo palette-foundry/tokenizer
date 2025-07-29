@@ -1,6 +1,6 @@
 {
     "name": "@palette-foundry/tokenizer",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "",
     "author": "Josh Bowden",
     "license": "ISC",
@@ -9,6 +9,9 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/Palette-Foundry/tokenizer"
+    },
+    "bin": {
+        "tokenize": "./dist/cjs/index.js"
     },
     "files": [
         "dist",
