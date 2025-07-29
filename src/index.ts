@@ -5,7 +5,6 @@ import { tokensToCss } from './generator';
 import { Tokens, TokenizerConfig } from './types/tokens';
 
 const config = loadConfig();
-console.log('Loaded config:', config);
 
 // --- Run and write CSS file ---
 const css = tokensToCss(config.tokens as Tokens);

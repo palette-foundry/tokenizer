@@ -1,58 +1,118 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Tokenizer Config",
     "type": "object",
-    "required": ["outputDir", "tokens"],
     "properties": {
         "outputDir": {
             "type": "string"
         },
         "tokens": {
             "type": "object",
-            "required": ["palette"],
             "properties": {
                 "palette": {
                     "type": "object",
-                    "properties": {
-                        "red": { "$ref": "#/definitions/colorScale" },
-                        "orange": { "$ref": "#/definitions/colorScale" },
-                        "yellow": { "$ref": "#/definitions/colorScale" },
-                        "green": { "$ref": "#/definitions/colorScale" },
-                        "blue": { "$ref": "#/definitions/colorScale" },
-                        "purple": { "$ref": "#/definitions/colorScale" },
-                        "pink": { "$ref": "#/definitions/colorScale" },
-                        "gray": { "$ref": "#/definitions/colorScale" }
-                    },
-                    "additionalProperties": false
+                    "patternProperties": {
+                        "^[a-z]+$": {
+                            "type": "object",
+                            "patternProperties": {
+                                "^(50|100|200|300|400|500|600|700|800|900)$": {
+                                    "type": "object",
+                                    "properties": {
+                                        "light": { "type": "string" },
+                                        "dark": {
+                                            "oneOf": [
+                                                { "type": "string" },
+                                                {
+                                                    "type": "object",
+                                                    "patternProperties": {
+                                                        "^(@[0-9]+|\\.\\w+|default)$": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": ["light", "dark"],
+                                    "additionalProperties": false
+                                }
+                            }
+                        }
+                    }
+                },
+                "color": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^[a-zA-Z]+$": {
+                            "oneOf": [
+                                { "type": "string" },
+                                {
+                                    "type": "object",
+                                    "patternProperties": {
+                                        "^(default|@\\d+|\\.\\w+)$": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ]
+                        }
+                    }
+                },
+                "space": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^\\d+$": { "type": "string" }
+                    }
+                },
+                "borderRadius": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^(none|\\d+|round)$": {
+                            "oneOf": [
+                                { "type": "string" },
+                                {
+                                    "type": "object",
+                                    "patternProperties": {
+                                        "^(default|@\\d+|\\.\\w+)$": {
+                                            "oneOf": [
+                                                { "type": "string" },
+                                                {
+                                                    "type": "object",
+                                                    "patternProperties": {
+                                                        "^(default|@\\d+|\\.\\w+)$": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ]
+                        }
+                    }
+                },
+                "font": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^[a-zA-Z0-9]+$": {
+                            "type": "object",
+                            "patternProperties": {
+                                "^(default|@\\d+|\\.\\w+)$": {
+                                    "type": "string"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    }
                 }
-            }
+            },
+            "required": ["palette"]
         }
     },
-    "definitions": {
-        "colorScale": {
-            "type": "object",
-            "properties": {
-                "50": { "$ref": "#/definitions/colorValue" },
-                "100": { "$ref": "#/definitions/colorValue" },
-                "200": { "$ref": "#/definitions/colorValue" },
-                "300": { "$ref": "#/definitions/colorValue" },
-                "400": { "$ref": "#/definitions/colorValue" },
-                "500": { "$ref": "#/definitions/colorValue" },
-                "600": { "$ref": "#/definitions/colorValue" },
-                "700": { "$ref": "#/definitions/colorValue" },
-                "800": { "$ref": "#/definitions/colorValue" },
-                "900": { "$ref": "#/definitions/colorValue" }
-            },
-            "additionalProperties": false
-        },
-        "colorValue": {
-            "type": "object",
-            "required": ["light", "dark"],
-            "properties": {
-                "light": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6})$" },
-                "dark": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6})$" }
-            },
-            "additionalProperties": false
-        }
-    }
+    "required": ["outputDir", "tokens"],
+    "additionalProperties": false
 }

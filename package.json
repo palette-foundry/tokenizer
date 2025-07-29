@@ -14,13 +14,18 @@
         "dist",
         "README.md"
     ],
+    "sideEffects": [
+        "dist/cjs/tokenizer.config.schema.json",
+        "dist/esm/tokenizer.config.schema.json"
+    ],
     "scripts": {
         "preinstall": "npx only-allow pnpm",
         "build:esm": "tsc --project tsconfig.esm.json",
         "build:cjs": "tsc --project tsconfig.cjs.json",
         "build": "pnpm build:esm && pnpm build:cjs",
+        "copy:schema": "cp src/*.json dist/cjs/schema > /dev/null && cp src/*.json dist/esm/schema > /dev/null",
         "test": "jest",
-        "generate": "pnpm build && node dist/cjs/index.js",
+        "generate": "pnpm build > /dev/null && pnpm copy:schema && node dist/cjs/index.js",
         "lint": "eslint . --ext .js,.ts",
         "lint:fix": "eslint . --ext .js,.ts --fix",
         "format": "prettier --check .",

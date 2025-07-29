@@ -1,10 +1,22 @@
 {
-    "outputDir": "dist/tokens",
+    "outputDir": "build",
     "tokens": {
         "palette": {
             "red": {
-                "50": { "light": "#fef2f2", "dark": "#7f1d1d" },
-                "100": { "light": "#fee2e2", "dark": "#991b1b" },
+                "50": {
+                    "light": "#fef2f2",
+                    "dark": {
+                        "default": "#fef2f2",
+                        "@800": "#fee2e2"
+                    }
+                },
+                "100": {
+                    "light": "#fee2e2",
+                    "dark": {
+                        "default": "#fee2e2",
+                        ".flag": "#fecaca"
+                    }
+                },
                 "200": { "light": "#fecaca", "dark": "#b91c1c" },
                 "300": { "light": "#fca5a5", "dark": "#dc2626" },
                 "400": { "light": "#f87171", "dark": "#ef4444" },
@@ -135,7 +147,13 @@
                     "@800": "{space.400}"
                 }
             },
-            "round": "999em"
+            "round": {
+                "default": "9999px",
+                "@800": {
+                    "default": "50px",
+                    ".featureFlag": "100px"
+                }
+            }
         },
         "font": {
             "h1": {
